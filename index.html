@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Juego Olivia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{
+      --primary:#007bff; --win:#28a745; --lose:#e63946; --bg:#f0f4f8;
+    }
+    body{margin:0;font-family:"Segoe UI",sans-serif;background:var(--bg);
+      display:flex;justify-content:center;align-items:center;min-height:100vh;}
+    .app{width:95%;max-width:800px;background:#fff;padding:20px;
+      border-radius:16px;box-shadow:0 6px 22px rgba(0,0,0,.15);}
+    h1,h2{text-align:center;margin:10px 0 20px;}
+    .section{display:none;} .section.active{display:block;animation:fadeIn .5s;}
+    .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:12px 0;}
+    .player{flex:1 1 260px;max-width:320px;min-width:240px;text-align:center;
+      background:#fff;border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.1);}
+    .avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;margin:0 auto 10px;}
+    .name{font-weight:bold;font-size:20px;margin:6px 0;}
+    .lives{font-size:28px;color:var(--lose);min-height:36px;margin:6px 0;}
+    .progress{background:#eee;border-radius:20px;height:18px;width:100%;overflow:hidden;margin:8px 0;}
+    .progress-bar{background:var(--primary);height:100%;width:100%;transition:width .4s;}
+    .btn{padding:14px 20px;font-size:18px;border:none;border-radius:12px;cursor:pointer;
+      font-weight:600;color:#fff;transition:.3s;}
+    .btn.primary{background:var(--primary);} .btn.danger{background:var(--lose);}
+    .btn.success{background:var(--win);} .btn.secondary{background:#ff9800;}
+    .result{text-align:center;font-size:24px;font-weight:bold;margin:20px 0;}
+    .result.win{color:var(--win);} .result.lose{color:var(--lose);}
+    .funny{text-align:center;font-size:36px;}
+    .funny img{max-width:220px;border-radius:12px;margin-top:12px;}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+    .shake{animation:shake .5s;}
+    /* --- Cuenta atrás circular --- */
+    .circle-timer{position:relative;width:200px;height:200px;margin:20px auto;}
+    .circle-timer svg{transform:rotate(-90deg);}
+    .circle-timer circle{fill:none;stroke-width:15;stroke-linecap:round;}
+    .circle-bg{stroke:#ddd;}
+    .circle-progress{stroke:var(--primary);transition:stroke-dashoffset 1s linear;}
+    .circle-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-size:48px;font-weight:bold;color:#333;}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Menú Principal</h1>
+
+    <!-- Menú principal -->
+    <section id="s-main" class="section active">
+      <div class="row">
+        <button class="btn primary" id="goLives">🎮 Juego de Vidas</button>
+        <button class="btn danger" id="goBomb">💣 Juego Bomba</button>
+      </div>
+    </section>
+
+    <!-- Juego de vidas -->
+    <section id="s-mode" class="section">
+      <h2>Juego de Vidas</h2>
+      <div class="row">
+        <label><input type="radio" name="mode" value="solo" checked> Solo Olivia</label>
+        <label><input type="radio" name="mode" value="duo"> Olivia y Papá</label>
+      </div>
+      <div class="row"><button id="nextToConfig" class="btn primary">Continuar</button></div>
+      <div class="row"><button class="btn secondary" onclick="show('#s-main')">Atrás</button></div>
+    </section>
+
+    <section id="s-config" class="section">
+      <div id="configCards" class="row"></div>
+      <div class="row">
+        <button id="startGame" class="btn primary">Iniciar partida</button>
+        <button id="backToMode" class="btn secondary">Atrás</button>
+      </div>
+    </section>
+
+    <section id="s-play" class="section">
+      <div id="players" class="row"></div>
+      <div class="row"><button id="finishWin" class="btn success">✅ ¡Victoria!</button></div>
+    </section>
+
+    <section id="s-end" class="section">
+      <div id="endMsg" class="result"></div>
+      <div id="funnyMsg" class="funny"></div>
+      <div class="row">
+        <button id="playAgain" class="btn secondary">🔄 Jugar de nuevo</button>
+        <button id="gotoHome" class="btn primary">🏠 Inicio</button>
+      </div>
+    </section>
+
+    <!-- Juego bomba -->
+    <section id="s-bomb-config" class="section">
+      <h2>Juego Bomba</h2>
+      <div class="row">
+        <label>Tiempo (segundos): 
+          <input type="number" id="bombTime" value="30" min="5" max="300" style="font-size:22px;width:100px;text-align:center">
+        </label>
+      </div>
+      <div class="row">
+        <button onclick="$('#bombTime').value=30" class="btn secondary">30s</button>
+        <button onclick="$('#bombTime').value=60" class="btn secondary">60s</button>
+        <button onclick="$('#bombTime').value=90" class="btn secondary">90s</button>
+      </div>
+      <div class="row">
+        <button id="startBomb" class="btn danger">💣 Iniciar bomba</button>
+        <button class="btn secondary" onclick="show('#s-main')">Atrás</button>
+      </div>
+    </section>
+
+    <section id="s-bomb-play" class="section">
+      <h2>⏳ Bomba activa</h2>
+      <div class="circle-timer">
+        <svg width="200" height="200">
+          <circle class="circle-bg" cx="100" cy="100" r="90"/>
+          <circle class="circle-progress" cx="100" cy="100" r="90"
+            stroke-dasharray="565" stroke-dashoffset="0"/>
+        </svg>
+        <div id="bombTimer" class="circle-text">30</div>
+      </div>
+      <div class="row">
+        <button id="defuseBomb" class="btn success">✔️ Desactivar bomba</button>
+      </div>
+    </section>
+
+    <section id="s-bomb-end" class="section">
+      <div id="bombMsg" class="result"></div>
+      <div id="bombFunny" class="funny"></div>
+      <div class="row">
+        <button class="btn secondary" onclick="show('#s-bomb-config')">🔄 Jugar otra vez</button>
+        <button class="btn primary" onclick="show('#s-main')">🏠 Inicio</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Sonidos -->
+  <audio id="sndLose" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+  <audio id="sndGameOver" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="sndWin" src="https://actions.google.com/sounds/v1/crowds/cheer.ogg"></audio>
+  <audio id="sndBoom" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+  <audio id="sndExplode" src="https://actions.google.com/sounds/v1/explosions/explosion.ogg"></audio>
+
+  <script>
+    // Helpers
+    let mode="solo"; let players=[]; let bombInterval=null; let bombRemaining=0; let bombTotal=0;
+    const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+    const hearts=n=>"❤️".repeat(Math.max(0,n));
+    function show(id){$$(".section").forEach(s=>s.classList.remove("active")); $(id).classList.add("active");}
+
+    // Menú principal
+    $("#goLives").addEventListener("click",()=>show("#s-mode"));
+    $("#goBomb").addEventListener("click",()=>show("#s-bomb-config"));
+
+    // JUEGO DE VIDAS
+    $("#nextToConfig").addEventListener("click",()=>{mode=$$("input[name=mode]").find(r=>r.checked).value;buildConfig();show("#s-config");});
+    $("#backToMode").addEventListener("click",()=>show("#s-mode"));
+    $("#startGame").addEventListener("click",()=>{
+      players=[]; 
+      players.push({name:"Olivia",img:"./Olivia.png",max:parseInt($("#life-Olivia").value)||3,lives:0});
+      if(mode==="duo"){players.push({name:"Papá",img:"./Papa.png",max:parseInt($("#life-Papa").value)||3,lives:0});}
+      players.forEach(p=>p.lives=p.max); renderGame(); show("#s-play");
+    });
+    function buildConfig(){
+      const wrap=$("#configCards"); wrap.innerHTML="";
+      const defs=(mode==="solo")?[{key:"Olivia",name:"Olivia",img:"./Olivia.png"}]:
+        [{key:"Olivia",name:"Olivia",img:"./Olivia.png"},{key:"Papa",name:"Papá",img:"./Papa.png"}];
+      defs.forEach(d=>{
+        wrap.innerHTML+=`<div class="player"><img src="${d.img}" class="avatar"><div class="name">${d.name}</div>
+        <label>Vidas: <input id="life-${d.key}" type="number" min="1" max="10" value="3"></label></div>`;
+      });
+    }
+    function renderGame(){
+      const c=$("#players"); c.innerHTML="";
+      players.forEach((p,i)=>{
+        c.innerHTML+=`<div class="player">
+          <img class="avatar" src="${p.img}">
+          <div class="name">${p.name}</div>
+          <div id="lives-${i}" class="lives">${hearts(p.lives)}</div>
+          <div class="progress"><div id="bar-${i}" class="progress-bar"></div></div>
+          <button class="btn danger" onclick="loseLife(${i})">Perder vida</button></div>`;
+        $(`#bar-${i}`).style.width="100%";
+      });
+    }
+    function loseLife(i){
+      let p=players[i]; if(p.lives<=0)return;
+      p.lives--; $("#sndLose").play();
+      const livesEl=$(`#lives-${i}`); livesEl.textContent=hearts(p.lives);
+      livesEl.classList.add("shake"); setTimeout(()=>livesEl.classList.remove("shake"),300);
+      $(`#bar-${i}`).style.width=(p.lives/p.max*100)+"%";
+      if(p.lives===0){endGame(p.name);}
+    }
+    function endGame(loser){
+      $("#endMsg").className="result lose"; $("#endMsg").textContent=`❌ ${loser} perdió todas las vidas`;
+      $("#funnyMsg").innerHTML=`😂<br><img src="./Gato.gif" alt="Gato cayéndose">`;
+      $("#sndGameOver").play(); show("#s-end");
+    }
+    $("#finishWin").addEventListener("click",()=>{ $("#endMsg").className="result win"; $("#endMsg").textContent="🎉 ¡Victoria!"; $("#funnyMsg").innerHTML="🥳"; $("#sndWin").play(); show("#s-end");});
+    $("#playAgain").addEventListener("click",()=>{players.forEach(p=>p.lives=p.max);renderGame();show("#s-play");});
+    $("#gotoHome").addEventListener("click",()=>show("#s-main"));
+
+    // JUEGO BOMBA
+    $("#startBomb").addEventListener("click",()=>{
+      bombTotal=parseInt($("#bombTime").value)||30;
+      bombRemaining=bombTotal;
+      updateCircle();
+      show("#s-bomb-play");
+      bombInterval=setInterval(()=>{
+        bombRemaining--; updateCircle();
+        $("#sndBoom").play();
+        if(bombRemaining<=0){clearInterval(bombInterval);explodeBomb();}
+      },1000);
+    });
+    $("#defuseBomb").addEventListener("click",()=>{
+      clearInterval(bombInterval);
+      $("#bombMsg").className="result win";
+      $("#bombMsg").textContent="✔️ ¡Has desactivado la bomba a tiempo!";
+      $("#bombFunny").innerHTML="🥳";
+      $("#sndWin").play();
+      show("#s-bomb-end");
+    });
+    function explodeBomb(){
+      $("#bombMsg").className="result lose";
+      $("#bombMsg").textContent="💥 ¡La bomba explotó!";
+      $("#bombFunny").innerHTML=`😂<br><img src="./Gato.gif" alt="Gato cayéndose">`;
+      $("#sndExplode").play(); $("#bombMsg").classList.add("shake");
+      show("#s-bomb-end");
+    }
+    function updateCircle(){
+      $("#bombTimer").textContent=bombRemaining;
+      const circle=$(".circle-progress");
+      const circumference=2*Math.PI*90;
+      const offset=circumference-(bombRemaining/bombTotal)*circumference;
+      circle.setAttribute("stroke-dasharray",circumference);
+      circle.setAttribute("stroke-dashoffset",offset);
+      if(bombRemaining<=bombTotal*0.3){circle.style.stroke="var(--lose)";}
+      else if(bombRemaining<=bombTotal*0.6){circle.style.stroke="orange";}
+      else{circle.style.stroke="var(--primary)";}
+    }
+  </script>
+</body>
+</html>

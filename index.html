@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>Juego Olivia</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff">
   <style>
     :root{
       --primary:#007bff; --win:#28a745; --lose:#e63946; --bg:#f0f4f8;
@@ -234,6 +236,11 @@
       if(bombRemaining<=bombTotal*0.3){circle.style.stroke="var(--lose)";}
       else if(bombRemaining<=bombTotal*0.6){circle.style.stroke="orange";}
       else{circle.style.stroke="var(--primary)";}
+    }
+
+    // Service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
     }
   </script>
 </body>
